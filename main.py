@@ -4,13 +4,16 @@ import requests
 from bs4 import BeautifulSoup
 from typing import List
 
-def scrape_table_of_timetables():
-    url = "https://www.cs.ubbcluj.ro/files/orar/2025-1/tabelar/index.html"
+def get_soup(url):
     response = requests.get(url)
-    soup = BeautifulSoup(response.text, "html.parser")
+    return BeautifulSoup(response.text, "html.parser")
 
+def construct_link(href):
+    return "https://www.cs.ubbcluj.ro/files/orar/2025-1/tabelar/" +href
+
+def get_list_of_timetables():
+    soup = get_soup(url)
     timetables = []
-    majors = []
 
     for row in soup.select("tr"):
         major_td = row.find("td")
@@ -20,22 +23,39 @@ def scrape_table_of_timetables():
         for link_tag in row.select("a"):
             href = link_tag.get("href")
             year = link_tag.get_text(strip=True)
-            timetables.append({"major":major,"year": year, "reference": href})
+            link=construct_link(href)
+            timetables.append({"major":major,"year": year, "reference": href, "link":link})
     return timetables
+
+def get_classes(soup):
+    grupe = [h.get_text(strip=True) for h in soup.select("h1") if "Grupa" in h.get_text(strip=True)]
+    timetables=[]
+    index=0
+    return grupe
+    '''
+    for row in soup.select("tr"):
+        print(index)
+        grupa_curenta=grupe[index]
+        index+=1
+        cells = row.select("td")
+        if not cells:
+            continue
+        ziua=cells[0].get_text(strip=True)
+        orele=cells[1].get_text(strip=True)
+        formatia=cells[2].get_text(strip=True)
+        tipul=cells[3].get_text(strip=True)
+        timetables[grupa_curenta].append(ziua,orele,formatia,tipul)
+    return timetables
+    '''
 
 
 app = FastAPI()
-
-@app.get("/timetable")
-def get_timetable():
-    return scrape_table_of_timetables()
-
+url = "https://www.cs.ubbcluj.ro/files/orar/2025-1/tabelar/index.html"
 
 @app.get("/")
-def read_root():
-    return {"Hello": "World"}
-
-
-@app.get("/items/{item_id}")
-def read_item(item_id: int, q: Union[str, None] = None):
-    return {"item_id": item_id, "q": q}
+def get_timetable():
+    timetables= get_list_of_timetables()
+    classes=[]
+    for t in timetables:
+        t["groups"]=get_classes(get_soup(t["link"]))
+    return timetables
