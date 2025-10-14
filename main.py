@@ -91,18 +91,22 @@ def get_group_schedule_of(link,group):
 
         ziua=cells[0].get_text(strip=True)
         orele=cells[1].get_text(strip=True)
-        formatia=cells[2].get_text(strip=True)
-        tipul=cells[3].get_text(strip=True)
+        frecventa=cells[2].get_text(strip=True)
+        sala=cells[3].get_text(strip=True)
+        formatia=cells[4].get_text(strip=True)
+        tipul=cells[5].get_text(strip=True)
+        disciplina=cells[6].get_text(strip=True)
+        cadrul_didactic=cells[7].get_text(strip=True)
 
         c = ClassSchedule(
             ziua=ziua,
             orele=orele,
-            frecventa=formatia,     
-            sala="placeholder", #webscarpe these fields as well
-            formatia="placeholder",    
+            frecventa=frecventa,     
+            sala=sala, #webscarpe these fields as well
+            formatia=formatia,    
             tipul=tipul,
-            disciplina="placeholder",
-            cadrul_didactic="placeholder",
+            disciplina=disciplina,
+            cadrul_didactic=cadrul_didactic,
         )
         classes.append(c)
     
