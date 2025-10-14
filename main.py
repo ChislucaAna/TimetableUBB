@@ -6,6 +6,8 @@ from typing import List
 from models import *
 import re
 
+ORAR_TABLE_URL = "https://www.cs.ubbcluj.ro/files/orar/2025-1/tabelar/"
+
 def get_html_content(url:str)-> str:
     '''
     get the html contents from the page located at url
@@ -18,7 +20,7 @@ def construct_timetable_link(href):
     constructs the link for the timetable page of a given specialisation
     based on the html file href. example input:M1.html for first year math majors
     '''
-    return "https://www.cs.ubbcluj.ro/files/orar/2025-1/tabelar/" +href
+    return ORAR_TABLE_URL + href
 
 def get_timetable_pages():
     '''
@@ -110,7 +112,7 @@ def get_group_schedule_of(link,group):
 
 
 app = FastAPI()
-url = "https://www.cs.ubbcluj.ro/files/orar/2025-1/tabelar/index.html"
+url = ORAR_TABLE_URL 
 
 @app.get("/")
 def get_timetable(): #seeing all specialisations and groups
