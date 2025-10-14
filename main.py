@@ -5,9 +5,11 @@ from bs4 import BeautifulSoup
 from typing import List
 from models import *
 import re
+from functools import lru_cache
 
 ORAR_TABLE_URL = "https://www.cs.ubbcluj.ro/files/orar/2025-1/tabelar/"
 
+@lru_cache(maxsize=1000)
 def get_html_content(url:str)-> str:
     '''
     get the html contents from the page located at url
