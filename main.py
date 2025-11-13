@@ -1,9 +1,10 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Query, HTTPException
 import requests
 from bs4 import BeautifulSoup
 from models import *
 import re
 from functools import lru_cache
+from typing import List
 
 ORAR_TABLE_URL = "https://www.cs.ubbcluj.ro/files/orar/2025-1/tabelar/"
 
@@ -116,41 +117,132 @@ def get_group_schedule_of(link,group):
     return g
 
 
-app = FastAPI()
+app = FastAPI(
+    title="UBB Timetable API",
+    description="API for retrieving university timetables from UBB Cluj-Napoca Computer Science faculty",
+    version="1.0.0",
+    docs_url="/swagger",
+    redoc_url="/redoc",
+    openapi_url="/openapi.json"
+)
+
 url = ORAR_TABLE_URL 
 
-@app.get("/")
-def get_timetable(): #seeing all specialisations and groups
-    timetables= get_timetable_pages()
+@app.get(
+    "/",
+    tags=["Timetables"],
+    summary="Get all available timetables",
+    description="Retrieve a list of all available majors, years, groups, and their timetable links",
+    response_model=List[TimetableLink]
+)
+def get_timetable():
+    """
+    Get all available specializations and groups.
+    
+    Returns a list of TimetableLink objects containing:
+    - major: The major/specialization name
+    - year: The academic year
+    - groups: List of available groups for that major/year
+    - link: URL to the timetable page
+    """
+    timetables = get_timetable_pages()
     return timetables
 
-@app.get("/schedules") #seeing all schedules for all groups
-def get_timetable():
-    timetables= get_timetable_pages()
-    group_schdeules=[]
+@app.get(
+    "/schedules",
+    tags=["Schedules"],
+    summary="Get all group schedules",
+    description="Retrieve the complete schedule for all groups across all majors and years",
+    response_model=List[GroupSchedule]
+)
+def get_all_schedules():
+    """
+    Get schedules for all groups.
+    
+    This endpoint fetches and returns the complete timetable schedule
+    for every group in every major and year. Note: This may take a while
+    to process as it scrapes data for all groups.
+    
+    Returns a list of GroupSchedule objects, each containing:
+    - group_name: The name of the group
+    - classes: List of ClassSchedule objects with class details
+    """
+    timetables = get_timetable_pages()
+    group_schedules = []
     for t in timetables:
         for g in t.groups:
-            group_schdeules.append(get_group_schedule_of(t.link,g))
-    return group_schdeules
+            group_schedules.append(get_group_schedule_of(t.link, g))
+    return group_schedules
 
-@app.get("/schedule") #get schedule for a specific group
-def get_group_schedule(major: str, year: str, group: str):
-    '''
+@app.get(
+    "/schedule",
+    tags=["Schedules"],
+    summary="Get schedule for a specific group",
+    description="Retrieve the timetable schedule for a specific group by major, year, and group name",
+    response_model=GroupSchedule,
+    responses={
+        200: {
+            "description": "Successfully retrieved group schedule",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "group_name": "Grupa 1",
+                        "classes": [
+                            {
+                                "ziua": "Luni",
+                                "orele": "08:00-10:00",
+                                "frecventa": "Saptamanal",
+                                "sala": "A101",
+                                "formatia": "Curs",
+                                "tipul": "Obligatoriu",
+                                "disciplina": "Programare",
+                                "cadrul_didactic": "Prof. X"
+                            }
+                        ]
+                    }
+                }
+            }
+        },
+        404: {
+            "description": "Group or timetable not found",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "error": "Group 'Grupa 1' not found for Math Year 1. Available groups: ['Grupa 2', 'Grupa 3']"
+                    }
+                }
+            }
+        }
+    }
+)
+def get_group_schedule(
+    group: str = Query(..., description="The group name (e.g., 'Grupa 1', 'Grupa 2')")
+):
+    """
     Get the timetable schedule for a specific group.
-    Parameters:
-    - major: The major/specialization name
-    - year: The year (e.g., "Year 1", "Year 2")
-    - group: The group name (e.g., "Grupa 1", "Grupa 2")
-    '''
+    
+    **Parameters:**
+    - **group**: The group name (e.g., "Grupa 1", "Grupa 2")
+    
+    **Returns:**
+    - GroupSchedule object containing the group name and list of classes
+    
+    **Errors:**
+    - Returns 404 error if the major/year combination is not found
+    - Returns 404 error if the group doesn't exist for the specified major/year
+    """
     timetables = get_timetable_pages()
+
     
     # Find the timetable link for the specified major and year
     for t in timetables:
-        if t.major == major and t.year == year:
-            # Check if the group exists for this major/year
-            if group in t.groups:
-                return get_group_schedule_of(t.link, group)
-            else:
-                return {"error": f"Group '{group}' not found for {major} {year}. Available groups: {t.groups}"}
-    
-    return {"error": f"No timetable found for {major} {year}"}
+        if group in t.groups:
+            return get_group_schedule_of(t.link, group)
+        else:
+            continue
+
+
+    raise HTTPException(
+        status_code=404,
+        detail=f"Group '{group}' not found."
+    )
