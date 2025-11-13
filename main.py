@@ -56,7 +56,6 @@ def get_timetable_pages():
             )
 
             timetable_pages.append(t)
-
     return timetable_pages
 
 def get_groups_of(link):
@@ -186,7 +185,7 @@ def get_all_schedules():
             "content": {
                 "application/json": {
                     "example": {
-                        "group_name": "Grupa 1",
+                        "group_name": "1011",
                         "classes": [
                             {
                                 "ziua": "Luni",
@@ -208,7 +207,7 @@ def get_all_schedules():
             "content": {
                 "application/json": {
                     "example": {
-                        "error": "Group 'Grupa 1' not found for Math Year 1. Available groups: ['Grupa 2', 'Grupa 3']"
+                        "error": "Group '1011' not found."
                     }
                 }
             }
@@ -216,13 +215,13 @@ def get_all_schedules():
     }
 )
 def get_group_schedule(
-    group: str = Query(..., description="The group name (e.g., 'Grupa 1', 'Grupa 2')")
+    group: str = Query(..., description="The group name (e.g., 1011, Grupa 1012)")
 ):
     """
     Get the timetable schedule for a specific group.
     
     **Parameters:**
-    - **group**: The group name (e.g., "Grupa 1", "Grupa 2")
+    - **group**: The group name (e.g., 1011, Grupa 1012)
     
     **Returns:**
     - GroupSchedule object containing the group name and list of classes
@@ -233,7 +232,11 @@ def get_group_schedule(
     """
     timetables = get_timetable_pages()
 
-    
+    group = group.strip()
+
+    if group.isnumeric():
+        group = "Grupa " + group
+
     # Find the timetable link for the specified major and year
     for t in timetables:
         if group in t.groups:
