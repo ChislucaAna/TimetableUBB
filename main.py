@@ -1,8 +1,6 @@
-from typing import Union
 from fastapi import FastAPI
 import requests
 from bs4 import BeautifulSoup
-from typing import List
 from models import *
 import re
 from functools import lru_cache
@@ -134,3 +132,25 @@ def get_timetable():
         for g in t.groups:
             group_schdeules.append(get_group_schedule_of(t.link,g))
     return group_schdeules
+
+@app.get("/schedule") #get schedule for a specific group
+def get_group_schedule(major: str, year: str, group: str):
+    '''
+    Get the timetable schedule for a specific group.
+    Parameters:
+    - major: The major/specialization name
+    - year: The year (e.g., "Year 1", "Year 2")
+    - group: The group name (e.g., "Grupa 1", "Grupa 2")
+    '''
+    timetables = get_timetable_pages()
+    
+    # Find the timetable link for the specified major and year
+    for t in timetables:
+        if t.major == major and t.year == year:
+            # Check if the group exists for this major/year
+            if group in t.groups:
+                return get_group_schedule_of(t.link, group)
+            else:
+                return {"error": f"Group '{group}' not found for {major} {year}. Available groups: {t.groups}"}
+    
+    return {"error": f"No timetable found for {major} {year}"}
