@@ -1,4 +1,5 @@
 from fastapi import FastAPI, Query, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 import requests
 from bs4 import BeautifulSoup
 from models import *
@@ -81,10 +82,15 @@ def get_group_schedule_of(link,group):
                 break
             if el.name == "h1":
                 break  # hit next section
+    
+    if not table:
+        # Return empty schedule if table not found
+        return GroupSchedule(group_name=group, classes=[])
+    
     for row in table.select("tr"):
         cells = row.select("td")
 
-        if not cells:#skipping the heading row, jumping straight to data
+        if not cells or len(cells) < 8:#skipping the heading row or incomplete rows
             continue
 
         ziua=cells[0].get_text(strip=True)
@@ -95,12 +101,16 @@ def get_group_schedule_of(link,group):
         tipul=cells[5].get_text(strip=True)
         disciplina=cells[6].get_text(strip=True)
         cadrul_didactic=cells[7].get_text(strip=True)
+        
+        # Skip empty rows
+        if not ziua and not disciplina:
+            continue
 
         c = ClassSchedule(
             ziua=ziua,
             orele=orele,
             frecventa=frecventa,     
-            sala=sala, #webscarpe these fields as well
+            sala=sala,
             formatia=formatia,    
             tipul=tipul,
             disciplina=disciplina,
@@ -123,6 +133,15 @@ app = FastAPI(
     docs_url="/swagger",
     redoc_url="/redoc",
     openapi_url="/openapi.json"
+)
+
+# Add CORS middleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # In production, replace with specific origins
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 url = ORAR_TABLE_URL 
